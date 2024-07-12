@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r load packages}
 library(terra)
 library(here)
-library(sf)
 ```
 
 Import site rasters
@@ -28,37 +27,59 @@ site8 <- terra::rast(here("Data", "Sites", "site8_new.tif"))
 ```
 
 # Changing raster resolution to 5cm/pixel
-Rasters are all currently 1.3cm/pixel and we will resample them using bilinear interpolation. 
+Rasters are all currently 1.3cm/pixel and we will resample them using bilinear interpolation. Each site will have the same workflow of creating a template with the site's extent and the new resolution, resampling the site raster and then saving the resampled site raster as a .tif file. 
 
-Set new resolution
+Set new resolution of 5cm/pixel
 ```{r}
-new_res <- 0.05
+new_res <- 0.05 #5cm = 0.05m
 ```
 
-Create template raster with the new resolution 
+Site 1
 ```{r}
-sites <- list(site1, site2, site3, site4, site5, site6, site7, site8)
-get_extent <- function(raster) {
-  e <- ext(raster)
-  c(xmin(e), xmax(e), ymin(e), ymax(e))
-}
-all_extents <- do.call(rbind, lapply(sites, get_extent))
-combined_extent <- c(min(all_extents[,1]), max(all_extents[,2]), min(all_extents[,3]), max(all_extents[,4]))
-template <- rast(xmin=combined_extent[1], xmax=combined_extent[2], ymin=combined_extent[3], ymax=combined_extent[4], res=new_res)
-print(template)
+template1 <- rast(ext(site1), res = new_res)
+site1_5cm <- resample(site1, template1, method = "bilinear")
+writeRaster(site1_5cm, here("Data", "Sites_5cm", "site1_5cm.tif"), overwrite = TRUE)
 ```
-
-Resample the raster and save the completed raster to a new file
+Site 2
 ```{r}
-resampled_sites <- lapply(sites, function(site) {
-  resample(site, template, method = "bilinear")
-})
+template2 <- rast(ext(site2), res = new_res)
+site2_5cm <- resample(site2, template2, method = "bilinear")
+writeRaster(site2_5cm, here("Data", "Sites_5cm", "site2_5cm.tif"), overwrite = TRUE)
 ```
-
-Save the resampled rasters as a separate file
+Site 3
 ```{r}
-output_folder <- here::("Data","Sites_5cm")
-resampled_paths <- paste0(output_folder, "/site", 1:8, "_5cm.tif")
-mapply(writeRaster, resampled_sites, resampled_paths, MoreArgs = list(overwrite = TRUE))
+template3 <- rast(ext(site3), res = new_res)
+site3_5cm <- resample(site3, template3, method = "bilinear")
+writeRaster(site3_5cm, here("Data", "Sites_5cm", "site3_5cm.tif"), overwrite = TRUE)
+```
+Site 4
+```{r}
+template4 <- rast(ext(site4), res = new_res)
+site4_5cm <- resample(site4, template4, method = "bilinear")
+writeRaster(site4_5cm, here("Data", "Sites_5cm", "site4_5cm.tif"), overwrite = TRUE)
+```
+Site 5
+```{r}
+template5 <- rast(ext(site5), res = new_res)
+site5_5cm <- resample(site5, template5, method = "bilinear")
+writeRaster(site5_5cm, here("Data", "Sites_5cm", "site5_5cm.tif"), overwrite = TRUE)
+```
+Site 6
+```{r}
+template6 <- rast(ext(site6), res = new_res)
+site6_5cm <- resample(site6, template6, method = "bilinear")
+writeRaster(site6_6cm, here("Data", "Sites_5cm", "site6_5cm.tif"), overwrite = TRUE)
+```
+Site 7
+```{r}
+template7 <- rast(ext(site7), res = new_res)
+site7_5cm <- resample(site7, template7, method = "bilinear")
+writeRaster(site7_5cm, here("Data", "Sites_5cm", "site7_5cm.tif"), overwrite = TRUE)
+```
+Site 8
+```{r}
+template8 <- rast(ext(site8), res = new_res)
+site8_5cm <- resample(site8, template8, method = "bilinear")
+writeRaster(site8_5cm, here("Data", "Sites_5cm", "site8_5cm.tif"), overwrite = TRUE)
 ```
 

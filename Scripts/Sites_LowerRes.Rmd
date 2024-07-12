@@ -1,0 +1,64 @@
+---
+title: "Sites_LowerRes"
+author: "Natalie"
+date: "2024-07-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages}
+library(terra)
+library(here)
+library(sf)
+```
+
+Import site rasters
+```{r}
+site1 <- terra::rast(here("Data", "Sites", "site1_new.tif"))
+site2 <- terra::rast(here("Data", "Sites", "site2_new.tif"))
+site3 <- terra::rast(here("Data", "Sites", "site3_new.tif"))
+site4 <- terra::rast(here("Data", "Sites", "site4_new.tif"))
+site5 <- terra::rast(here("Data", "Sites", "site5_new.tif"))
+site6 <- terra::rast(here("Data", "Sites", "site6_new.tif"))
+site7 <- terra::rast(here("Data", "Sites", "site7_new.tif"))
+site8 <- terra::rast(here("Data", "Sites", "site8_new.tif"))
+```
+
+# Changing raster resolution to 5cm/pixel
+Rasters are all currently 1.3cm/pixel and we will resample them using bilinear interpolation. 
+
+Set new resolution
+```{r}
+new_res <- 0.05
+```
+
+Create template raster with the new resolution 
+```{r}
+sites <- list(site1, site2, site3, site4, site5, site6, site7, site8)
+get_extent <- function(raster) {
+  e <- ext(raster)
+  c(xmin(e), xmax(e), ymin(e), ymax(e))
+}
+all_extents <- do.call(rbind, lapply(sites, get_extent))
+combined_extent <- c(min(all_extents[,1]), max(all_extents[,2]), min(all_extents[,3]), max(all_extents[,4]))
+template <- rast(xmin=combined_extent[1], xmax=combined_extent[2], ymin=combined_extent[3], ymax=combined_extent[4], res=new_res)
+print(template)
+```
+
+Resample the raster and save the completed raster to a new file
+```{r}
+resampled_sites <- lapply(sites, function(site) {
+  resample(site, template, method = "bilinear")
+})
+```
+
+Save the resampled rasters as a separate file
+```{r}
+output_folder <- here::("Data","Sites_5cm")
+resampled_paths <- paste0(output_folder, "/site", 1:8, "_5cm.tif")
+mapply(writeRaster, resampled_sites, resampled_paths, MoreArgs = list(overwrite = TRUE))
+```
+

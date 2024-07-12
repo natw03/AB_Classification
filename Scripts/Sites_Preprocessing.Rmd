@@ -1,0 +1,283 @@
+---
+title: "Preprocessing"
+author: "Natalie"
+date: "2024-07-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load package}
+library(terra)
+library(sf)
+```
+
+# Remove band 4
+```{r Antelope Brush Burn}
+AntelopeBrushBurn <- rast("/home/natw03/Documents/Sites_Reprojected/AntelopeBrushBurn_Reprojected.tif")
+print(AntelopeBrushBurn)
+summary(AntelopeBrushBurn)
+plot(AntelopeBrushBurn)
+
+#Remove band 1
+lyr_names1 <- names(AntelopeBrushBurn)
+bands_to_keep1 <- which(lyr_names1 %in% c("AntelopeBrushBurn_Reprojected_1", 
+                                        "AntelopeBrushBurn_Reprojected_2", 
+                                        "AntelopeBrushBurn_Reprojected_3"))
+site1 <- AntelopeBrushBurn[[bands_to_keep1]]
+plot(site1)
+
+#Export new raster
+output_site1 <- "/home/natw03/Documents/Bands_Adjusted/site1.tif"
+writeRaster(site1, output_site1)
+```
+
+```{r Antelope Brush Flat}
+AntelopeBrushFlat <- rast("/home/natw03/Documents/Sites_Reprojected/AntelopeBrushFlat_Reprojected.tif")
+print(AntelopeBrushFlat)
+summary(AntelopeBrushFlat)
+plot(AntelopeBrushFlat)
+
+#Remove band 4
+lyr_names2 <- names(AntelopeBrushFlat)
+bands_to_keep2 <- which(lyr_names2 %in% c("AntelopeBrushFlat_Reprojected_1",
+                                          "AntelopeBrushFlat_Reprojected_2",
+                                          "AntelopeBrushFlat_Reprojected_3"))
+site2 <- AntelopeBrushFlat[[bands_to_keep2]]
+plot(site2)
+
+#Export new raster 
+output_site2 <- "/home/natw03/Documents/Bands_Adjusted/site2.tif"
+writeRaster(site2, output_site2)
+```
+
+```{r Antelope Brush Fortis}
+AntelopeBrushFortis <- rast("/home/natw03/Documents/Sites_Reprojected/AntelopeBrushFortis_Reprojected.tif")
+print(AntelopeBrushFortis)
+summary(AntelopeBrushFortis)
+plot(AntelopeBrushFortis)
+
+#Remove band 4
+lyr_names3 <- names(AntelopeBrushFortis)
+bands_to_keep3 <- which(lyr_names3 %in% c("AntelopeBrushFortis_Reprojected_1",
+                                          "AntelopeBrushFortis_Reprojected_2",
+                                          "AntelopeBrushFortis_Reprojected_3"))
+site3 <- AntelopeBrushFortis[[bands_to_keep3]]
+plot(site3)
+
+#Export new raster 
+output_site3 <- "/home/natw03/Documents/Bands_Adjusted/site3.tif"
+writeRaster(site3, output_site3)
+```
+
+```{r Commercial Rd} 
+ CommercialRd <- rast("/home/natw03/Documents/Sites_Reprojected/CommercialRd_Reprojected.tif")
+print(CommercialRd)
+summary(CommercialRd)
+plot(CommercialRd)
+
+#Remove band 4
+lyr_names4 <- names(CommercialRd)
+bands_to_keep4 <- which(lyr_names4 %in% c("CommercialRd_Reprojected_1",
+                                          "CommercialRd_Reprojected_2",
+                                          "CommercialRd_Reprojected_3"))
+site4 <- CommercialRd[[bands_to_keep4]]
+plot(site4)
+
+#Export new raster 
+output_site4 <- "/home/natw03/Documents/Bands_Adjusted/site4.tif"
+writeRaster(site4, output_site4)
+```
+
+```{r Fields Lease}
+FieldsLease <- rast("/home/natw03/Documents/Sites_Reprojected/FieldsLease_Reprojected.tif")
+print(FieldsLease)
+summary(FieldsLease)
+plot(FieldsLease)
+
+#Remove band 4
+lyr_names5 <- names(FieldsLease)
+bands_to_keep5 <- which(lyr_names5 %in% c("FieldsLease_Reprojected_1",
+                                          "FieldsLease_Reprojected_2",
+                                          "FieldsLease_Reprojected_3"))
+site5 <- FieldsLease[[bands_to_keep5]]
+plot(site5)
+
+#Export new raster 
+output_site5 <- "/home/natw03/Documents/Bands_Adjusted/site5.tif"
+writeRaster(site5, output_site5)
+```
+
+```{r HaynesLease}
+#Import raster
+HaynesLease <- rast("/home/natw03/Documents/Sites_Reprojected/HaynesLease_Reprojected.tif")
+print(HaynesLease)
+summary(HaynesLease)
+plot(HaynesLease)
+
+#Remove band 4
+lyr_names6 <- names(HaynesLease)
+bands_to_keep6 <- which(lyr_names6 %in% c("HaynesLease_Reprojected_1",
+                                          "HaynesLease_Reprojected_2",
+                                          "HaynesLease_Reprojected_3"))
+site6 <- HaynesLease[[bands_to_keep6]]
+plot(site6)
+
+#Export new raster 
+output_site6 <- "/home/natw03/Documents/Bands_Adjusted/site6.tif"
+writeRaster(site6, output_site6)
+```
+
+```{r Sportmans Bowl}
+#Import raster
+SportmansBowl <- rast("/home/natw03/Documents/Sites_Reprojected/SportmansBowl_Reprojected.tif")
+print(SportmansBowl)
+summary(SportmansBowl)
+plot(SportmansBowl)
+
+#Remove band 4
+lyr_names7 <- names(SportmansBowl)
+bands_to_keep7 <- which(lyr_names7 %in% c("SportmansBowl_Reprojected_1",
+                                          "SportmansBowl_Reprojected_2",
+                                          "SportmansBowl_Reprojected_3"))
+site7 <- SportmansBowl[[bands_to_keep7]]
+plot(site7)
+
+#Export new raster 
+output_site7 <- "/home/natw03/Documents/Bands_Adjusted/site7.tif"
+writeRaster(site7, output_site7)
+```
+
+```{r Willowbrook Homestead}
+#Import raster
+Willowbrook <- rast("/home/natw03/Documents/Sites_Reprojected/Willowbrook_Reprojected.tif")
+print(Willowbrook)
+summary(Willowbrook)
+plot(Willowbrook)
+
+#Remove band 4
+lyr_names8 <- names(Willowbrook)
+bands_to_keep8 <- which(lyr_names8 %in% c("Willowbrook_Reprojected_1",
+                                          "Willowbrook_Reprojected_2",
+                                          "Willowbrook_Reprojected_3"))
+site8 <- Willowbrook[[bands_to_keep8]]
+plotRGB(site8)
+
+#Export new raster 
+#output_site8 <- "/home/natw03/Documents/Bands_Adjusted/site8.tif"
+#writeRaster(site8, output_site8)
+```
+
+# Make sure all sites only have 3 bands
+```{r}
+#Import new rasters
+folderPath <- "/home/natw03/Documents/Bands_Adjusted"
+raster_files <- list.files(path = folderPath, pattern = "\\.tif$", full.names = TRUE)
+
+#Check if a rasters have 3 bands
+check_raster_bands <- function(raster_path) {
+  r <- rast(raster_path)
+  return(nlyr(r) == 3)
+}
+all_rasters_ok <- all(sapply(raster_files, check_raster_bands))
+
+#If all rasters have 3 bands, display "ok"
+if (all_rasters_ok) {
+  print("ok")
+}else {
+  print("not all rasters have 3 bands")}
+```
+
+# Remove black space around raster
+
+```{r site1}
+site1 <- rast("/home/natw03/Documents/Bands_Adjusted/site1.tif")
+func1 <- function(x) {
+  x[rowSums(x == 0) == 3, ] <- NA
+  x}
+site1_new <- app(site1, func1)
+par(col.axis="white",col.lab="white",tck=0)
+plotRGB(site1_new, axis = TRUE)
+writeRaster(site1_new, filename = "/home/natw03/Documents/Sites_cropped/site1_new.tif")
+```
+
+```{r site2}
+site2 <- rast("/home/natw03/Documents/Bands_Adjusted/site2.tif")
+func2 <- function(x) {
+  x[rowSums(x == 0) == 3, ] <- NA
+  x}
+site2_new <- app(site2, func2)
+par(col.axis="white",col.lab="white",tck=0)
+plotRGB(site2_new, axis = TRUE)
+writeRaster(site2_new, filename = "/home/natw03/Documents/Sites_cropped/site2_new.tif")
+```
+
+```{r site3}
+site3 <- rast("/home/natw03/Documents/Bands_Adjusted/site3.tif")
+func3 <- function(x) {
+  x[rowSums(x == 0) == 3, ] <- NA
+  x}
+site3_new <- app(site3, func3)
+par(col.axis="white",col.lab="white",tck=0)
+plotRGB(site3_new, axis = TRUE)
+writeRaster(site3_new, filename = "/home/natw03/Documents/Sites_cropped/site3_new.tif")
+```
+
+```{r site4}
+site4 <- rast("/home/natw03/Documents/Bands_Adjusted/site4.tif")
+func4 <- function(x) {
+  x[rowSums(x == 0) == 3, ] <- NA
+  x}
+site4_new <- app(site4, func4)
+par(col.axis="white",col.lab="white",tck=0)
+plotRGB(site4_new, axis = TRUE)
+writeRaster(site4_new, filename = "/home/natw03/Documents/Sites_cropped/site4_new.tif")
+```
+
+```{r site5}
+site5 <- rast("/home/natw03/Documents/Bands_Adjusted/site5.tif")
+func5 <- function(x) {
+  x[rowSums(x == 0) == 3, ] <- NA
+  x}
+site5_new <- app(site5, func5)
+par(col.axis="white",col.lab="white",tck=0)
+plotRGB(site5_new, axis = TRUE)
+writeRaster(site5_new, filename = "/home/natw03/Documents/Sites_cropped/site5_new.tif")
+```
+
+```{r site6}
+site6 <- rast("/home/natw03/Documents/Bands_Adjusted/site6.tif")
+func6 <- function(x) {
+  x[rowSums(x == 0) == 3, ] <- NA
+  x}
+site6_new <- app(site6, func6)
+par(col.axis="white",col.lab="white",tck=0)
+plotRGB(site6_new, axis = TRUE)
+writeRaster(site6_new, filename = "/home/natw03/Documents/Sites_cropped/site6_new.tif")
+```
+
+```{r site7}
+site7 <- rast("/home/natw03/Documents/Bands_Adjusted/site7.tif")
+func7 <- function(x) {
+  x[rowSums(x == 0) == 3, ] <- NA
+  x}
+site7_new <- app(site7, func7)
+par(col.axis="white",col.lab="white",tck=0)
+plotRGB(site7_new, axis = TRUE)
+writeRaster(site7_new, filename = "/home/natw03/Documents/Sites_cropped/site7_new.tif")
+```
+
+```{r}
+site8 <- rast("/home/natw03/Documents/Bands_Adjusted/site8.tif")
+func8 <- function(x) {
+  x[rowSums(x == 0) == 3, ] <- NA
+  x}
+site8_new <- app(site8, func8)
+par(col.axis="white",col.lab="white",tck=0)
+plotRGB(site8_new, axis = TRUE)
+writeRaster(site8_new, filename = "/home/natw03/Documents/Sites_cropped/site8_new.tif")
+```
+

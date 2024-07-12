@@ -68,7 +68,7 @@ Site 6
 ```{r}
 template6 <- rast(ext(site6), res = new_res)
 site6_5cm <- resample(site6, template6, method = "bilinear")
-writeRaster(site6_6cm, here("Data", "Sites_5cm", "site6_5cm.tif"), overwrite = TRUE)
+writeRaster(site6_5cm, here("Data", "Sites_5cm", "site6_5cm.tif"), overwrite = TRUE)
 ```
 Site 7
 ```{r}

@@ -1,0 +1,85 @@
+---
+title: "Sites_7cm"
+author: "Natalie"
+date: "2024-07-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages}
+library(terra)
+library(here)
+```
+
+Import site rasters
+```{r}
+site1 <- terra::rast(here("Data", "Sites_1.3cm", "site1_1.3cm.tif"))
+site2 <- terra::rast(here("Data", "Sites_1.3cm", "site2_1.3cm.tif"))
+site3 <- terra::rast(here("Data", "Sites_1.3cm", "site3_1.3cm.tif"))
+site4 <- terra::rast(here("Data", "Sites_1.3cm", "site4_1.3cm.tif"))
+site5 <- terra::rast(here("Data", "Sites_1.3cm", "site5_1.3cm.tif"))
+site6 <- terra::rast(here("Data", "Sites_1.3cm", "site6_1.3cm.tif"))
+site7 <- terra::rast(here("Data", "Sites_1.3cm", "site7_1.3cm.tif"))
+site8 <- terra::rast(here("Data", "Sites_1.3cm", "site8_1.3cm.tif"))
+```
+
+# Changing raster resolution to 7cm/pixel
+Rasters are all currently 1.3cm/pixel and we will resample them using bilinear interpolation. Each site will have the same workflow of creating a template with the site's extent and the new resolution, resampling the site raster and then saving the resampled site raster as a .tif file. 
+
+Set new resolution of 7cm/pixel
+```{r}
+new_res <- 0.07 #7cm = 0.07m
+```
+
+Site 1
+```{r}
+template1 <- rast(ext(site1), res = new_res)
+site1_7cm <- resample(site1, template1, method = "bilinear")
+writeRaster(site1_7cm, here("Data", "Sites_7cm", "site1_7cm.tif"), overwrite = TRUE)
+```
+Site 2
+```{r}
+template2 <- rast(ext(site2), res = new_res)
+site2_7cm <- resample(site2, template2, method = "bilinear")
+writeRaster(site2_7cm, here("Data", "Sites_7cm", "site2_7cm.tif"), overwrite = TRUE)
+```
+Site 3
+```{r}
+template3 <- rast(ext(site3), res = new_res)
+site3_7cm <- resample(site3, template3, method = "bilinear")
+writeRaster(site3_7cm, here("Data", "Sites_7cm", "site3_7cm.tif"), overwrite = TRUE)
+```
+Site 4
+```{r}
+template4 <- rast(ext(site4), res = new_res)
+site4_7cm <- resample(site4, template4, method = "bilinear")
+writeRaster(site4_7cm, here("Data", "Sites_7cm", "site4_7cm.tif"), overwrite = TRUE)
+```
+Site 5
+```{r}
+template5 <- rast(ext(site5), res = new_res)
+site5_7cm <- resample(site5, template5, method = "bilinear")
+writeRaster(site5_7cm, here("Data", "Sites_7cm", "site5_7cm.tif"), overwrite = TRUE)
+```
+Site 6
+```{r}
+template6 <- rast(ext(site6), res = new_res)
+site6_7cm <- resample(site6, template6, method = "bilinear")
+writeRaster(site6_7cm, here("Data", "Sites_7cm", "site6_7cm.tif"), overwrite = TRUE)
+```
+Site 7
+```{r}
+template7 <- rast(ext(site7), res = new_res)
+site7_7cm <- resample(site7, template7, method = "bilinear")
+writeRaster(site7_7cm, here("Data", "Sites_7cm", "site7_7cm.tif"), overwrite = TRUE)
+```
+Site 8
+```{r}
+template8 <- rast(ext(site8), res = new_res)
+site8_7cm <- resample(site8, template8, method = "bilinear")
+writeRaster(site8_7cm, here("Data", "Sites_7cm", "site8_7cm.tif"), overwrite = TRUE)
+```
+

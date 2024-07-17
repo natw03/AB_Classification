@@ -1,0 +1,120 @@
+---
+title: "classification_test2"
+author: "Natalie"
+date: "2024-07-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=F}
+library(terra)
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(EBImage)
+library(mlr3)
+library(mlr3learners)
+library(here)
+library(OpenImageR)
+```
+
+```{r}
+site6 <- rast(here("Data", "TestClassification", "site6_smallER.tif"))
+names(site6) <- c("red", "green", "blue")
+
+site6_poly <- st_read(here("Data", "TestClassification", "site6_poly_smaller_reprojected.shp"))
+```
+
+Extract pixel values from raster to create a list and merge elements together into a dataframe
+```{r}
+rgb_values <- exactextractr::exact_extract(site6, site6_poly, include_cols = "className")
+rgb_values_tibble <- as_tibble(rgb_values[[1]])
+
+for (i in 3:length(site6_poly)) {
+  temp <- as_tibble(site6_poly[[i]])
+  rgb_values_tibble <- bind_rows(rgb_values, temp)
+}
+
+rgb_values_tibble_final <- rgb_values_tibble %>%
+  filter(coverage_fraction >= 0.95)
+
+rgb_values_tibble_final_nonas <- rgb_values_tibble_final %>%
+  tidyr::drop_na()
+```
+
+```{r}
+site6_array <- as.array(site6)
+
+site6_gray <- rgb_2gray(site6_array)
+site6_gray[is.na(site6_gray)] <- mean(site6_gray, na.rm = TRUE)
+edges <- edge_detection(site6_gray, method = "Sobel")
+num_edges <- sum(edges)
+```
+
+```{r}
+rgb_values_tibble_final_nonas$edges <- num_edges
+rgb_values_tibble_final_nonas <- select(rgb_values_tibble_final_nonas, -geometry)
+data <- rgb_values_tibble_final_nonas
+```
+
+```{r}
+data$class <- as.factor(data$class)
+data <- na.omit(data)
+```
+
+#mlr3
+Create mlr3 task
+```{r}
+task <- TaskClassif$new(id = "test_classification", backend = data, target = "class")
+```
+
+Create random forest learner
+```{r}
+#create a random forest learner
+learner <- lrn("classif.ranger", predict_type = "response")
+```
+
+Split data into 70% training and 30% validation
+```{r}
+set.seed(123)
+train <- sample(task$nrow, 0.7 * task$nrow)
+test <- setdiff(seq_len(task$nrow), train)
+```
+
+Train the random forest model
+```{r}
+learner$train(task, row_ids = train)
+```
+
+Make predictions on the test data
+```{r}
+pred <- learner$predict(task, row_ids = test)
+```
+Evaluate model and obtain accuracy and kappa value
+```{r}
+conmat <- pred$confusion
+
+#calculate overall accuracy
+n <- sum(conmat)
+diag <- diag(conmat)
+OA <- sum(diag) / n
+OA
+#calculate kappa value
+rowsums <- apply(conmat, 1, sum)
+p <- rowsums / n
+colsums <- apply(conmat, 2, sum)
+q <- colsums / n
+expAccuracy <- sum(p*q)
+kappa <- (OA - expAccuracy) / (1 - expAccuracy)
+kappa
+```
+##Apply the trained model to the entire raster
+```{r}
+#extract
+site6_boundary <- st_read(here("Data", "TestClassification", "site6_cropBoundary_smaller.shp"))
+rgb_wholesite <- exactextractr::exact_extract(site6 , site6_boundary)
+```
+

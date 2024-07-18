@@ -19,6 +19,8 @@ library(mlr3)
 library(mlr3learners)
 library(here)
 library(OpenImageR)
+library(exactextractr)
+library(mlr3spatial)
 ```
 
 ```{r}
@@ -30,6 +32,7 @@ site6_poly <- st_read(here("Data", "TestClassification", "site6_poly_smaller_rep
 
 Extract pixel values from raster to create a list and merge elements together into a dataframe
 ```{r}
+#extract rgb pixel values within training polygons and merge them into a dataframe
 rgb_values <- exactextractr::exact_extract(site6, site6_poly, include_cols = "className")
 rgb_values_tibble <- as_tibble(rgb_values[[1]])
 
@@ -37,17 +40,18 @@ for (i in 3:length(site6_poly)) {
   temp <- as_tibble(site6_poly[[i]])
   rgb_values_tibble <- bind_rows(rgb_values, temp)
 }
-
+#only include pixels that are at least 95% within a polygon
 rgb_values_tibble_final <- rgb_values_tibble %>%
   filter(coverage_fraction >= 0.95)
-
+#remove all NA values from the tibble
 rgb_values_tibble_final_nonas <- rgb_values_tibble_final %>%
   tidyr::drop_na()
 ```
 
 ```{r}
+#convert the site6 raster to an array
 site6_array <- as.array(site6)
-
+#calculate the number of edges 
 site6_gray <- rgb_2gray(site6_array)
 site6_gray[is.na(site6_gray)] <- mean(site6_gray, na.rm = TRUE)
 edges <- edge_detection(site6_gray, method = "Sobel")
@@ -55,20 +59,25 @@ num_edges <- sum(edges)
 ```
 
 ```{r}
+#add a new column for the number of edges
 rgb_values_tibble_final_nonas$edges <- num_edges
+#remove the geometry and coverage_fraction column as we dont need them for the learner
 rgb_values_tibble_final_nonas <- select(rgb_values_tibble_final_nonas, -geometry)
+rgb_values_tibble_final_nonas <- select(rgb_values_tibble_final_nonas, -coverage_fraction)
+#rename the tibble to "data" 
 data <- rgb_values_tibble_final_nonas
 ```
 
 ```{r}
-data$class <- as.factor(data$class)
+#convert the className column to a factor so it can be used in the mlr3 task. 
+data$className <- as.factor(data$className)
 data <- na.omit(data)
 ```
 
 #mlr3
 Create mlr3 task
 ```{r}
-task <- TaskClassif$new(id = "test_classification", backend = data, target = "class")
+task <- TaskClassif$new(id = "test_classification", backend = data, target = "className")
 ```
 
 Create random forest learner
@@ -112,9 +121,30 @@ kappa <- (OA - expAccuracy) / (1 - expAccuracy)
 kappa
 ```
 ##Apply the trained model to the entire raster
+
+Extract rgb values of the raster and add a "className" column to it
 ```{r}
-#extract
 site6_boundary <- st_read(here("Data", "TestClassification", "site6_cropBoundary_smaller.shp"))
-rgb_wholesite <- exactextractr::exact_extract(site6 , site6_boundary)
+rgb_values_wholesite <- extract(site6, site6_boundary, ID=F, xy=T)
+print(rgb_values_wholesite)
+
+#convert output to a dataframe
+rgb_values_wholesite_df <- as.data.frame(rgb_values_wholesite)
+#add a "className" column
+rgb_values_wholesite_df$className <- NA
+
+#add the edges column that we calculated before
+rgb_values_wholesite_df$edges <- num_edges
+print(rgb_values_wholesite_df)
 ```
+
+```{r}
+rgb_values_wholesite_df <- rgb_values_wholesite_df[!is.na(rgb_values_wholesite_df$red), ]
+```
+
+Apply the model to the new dataframe
+```{r}
+predict <- learner$predict_newdata(newdata = rgb_values_wholesite_df)
+```
+
 

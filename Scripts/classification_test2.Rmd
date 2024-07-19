@@ -139,7 +139,11 @@ print(rgb_values_wholesite_df)
 ```
 
 ```{r}
+#remove NA values in "red" column
 rgb_values_wholesite_df <- rgb_values_wholesite_df[!is.na(rgb_values_wholesite_df$red), ]
+#convert "className" column into a factor
+rgb_values_wholesite_df$className <- as.factor(rgb_values_wholesite_df$className)
+print(rgb_values_wholesite_df)
 ```
 
 Apply the model to the new dataframe

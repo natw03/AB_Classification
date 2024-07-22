@@ -1,0 +1,125 @@
+---
+title: "classification_test3"
+author: "Natalie"
+date: "2024-07-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages, message=F}
+library(terra)
+library(sf)
+library(dplyr)
+library(ggplot2)
+library(EBImage)
+library(mlr3)
+library(mlr3learners)
+library(here)
+library(OpenImageR)
+library(exactextractr)
+library(mlr3spatial)
+```
+
+# Preprocessing
+Import datasets
+```{r}
+#import site6 raster
+site6 <- rast(here("Data", "TestClassification", "site6_smallER.tif"))
+names(site6) <- c("red", "green", "blue") 
+#import training polygons
+site6_poly <- st_read(here("Data", "TestClassification", "site6_poly_smaller_reprojected.shp"))
+#import site boundary
+site6_boundary <- st_read(here("Data", "TestClassification", "site6_cropBoundary_smaller.shp"))
+```
+
+Extract pixel values from raster to create a list and merge elements together into a dataframe
+```{r}
+#extract rgb pixel values within training polygons and merge them into a dataframe
+rgb_values <- exactextractr::exact_extract(site6, site6_poly, include_cols = "className")
+rgb_values_tibble <- as_tibble(rgb_values[[1]])
+
+for (i in 3:length(site6_poly)) {
+  temp <- as_tibble(site6_poly[[i]])
+  rgb_values_tibble <- bind_rows(rgb_values, temp)
+}
+#only include pixels that are at least 95% within a polygon
+rgb_values_tibble_final <- rgb_values_tibble %>%
+  filter(coverage_fraction >= 0.95)
+#remove all NA values from the tibble
+rgb_values_tibble_final_nonas <- rgb_values_tibble_final %>%
+  tidyr::drop_na()
+#remove the "geometry" and "coverage_fraction" column
+rgb_values_tibble_final_nonas <- select(rgb_values_tibble_final_nonas, -geometry)
+rgb_values_tibble_final_nonas <- select(rgb_values_tibble_final_nonas, -coverage_fraction)
+#display dataframe
+print(rgb_values_tibble_final_nonas)
+#rename dataframe 
+data <- rgb_values_tibble_final_nonas
+```
+
+Convert the className column to a factor so it can be used in the mlr3 task. 
+```{r}
+data$className <- as.factor(data$className)
+```
+
+# mlr3 
+Create task
+```{r}
+task <- as_task_classif(data, target = "className")
+task
+```
+Partition task into 70% training and 30% testing
+```{r}
+set.seed(100)
+splits <- partition(task, ratio = 0.7)
+```
+
+Create random forest learner
+```{r}
+learner <- mlr3::lrn("classif.ranger", predict_type = "prob")
+```
+Train random forest learner
+```{r}
+training <- learner$train(task, splits$train)
+```
+
+Validate random forest learner and obtain overall accuracy
+```{r}
+testing <- learner$predict(task, splits$test)
+#obtain overall accuracy of model
+testing$score(msr("classif.acc"))
+```
+
+# Apply model to new dataset
+
+Extract rgb values of all cells, including their coordinates, and create a dataframe
+```{r}
+rgb_values_wholesite <- extract(site6, site6_boundary, xy=T)
+print(rgb_values_wholesite)
+
+#convert to dataframe
+rgb_values_wholesite_df <- as.data.frame(rgb_values_wholesite)
+rgb_values_wholesite_df
+```
+Remove NA values
+```{r}
+rgb_values_wholesite_nonas <- rgb_values_wholesite_df %>%
+  tidyr::drop_na()
+print(rgb_values_wholesite_nonas)
+```
+
+Add "className" column and convert it to a factor
+```{r}
+rgb_values_wholesite_nonas$className <- NA
+rgb_values_wholesite_nonas$className <- as.factor(rgb_values_wholesite_nonas$className)
+print(rgb_values_wholesite_nonas)
+```
+Apply the model to a new dataframe
+```{r}
+predicted_classes <- learner$predict_newdata(newdata = rgb_values_wholesite_nonas)
+print(predicted_classes)
+```
+

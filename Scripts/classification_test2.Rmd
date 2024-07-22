@@ -50,17 +50,17 @@ rgb_values_tibble_final_nonas <- rgb_values_tibble_final %>%
 
 ```{r}
 #convert the site6 raster to an array
-site6_array <- as.array(site6)
+#site6_array <- as.array(site6)
 #calculate the number of edges 
-site6_gray <- rgb_2gray(site6_array)
-site6_gray[is.na(site6_gray)] <- mean(site6_gray, na.rm = TRUE)
-edges <- edge_detection(site6_gray, method = "Sobel")
-num_edges <- sum(edges)
+#site6_gray <- rgb_2gray(site6_array)
+#site6_gray[is.na(site6_gray)] <- mean(site6_gray, na.rm = TRUE)
+#edges <- edge_detection(site6_gray, method = "Sobel")
+#num_edges <- sum(edges)
 ```
 
 ```{r}
 #add a new column for the number of edges
-rgb_values_tibble_final_nonas$edges <- num_edges
+#rgb_values_tibble_final_nonas$edges <- edges
 #remove the geometry and coverage_fraction column as we dont need them for the learner
 rgb_values_tibble_final_nonas <- select(rgb_values_tibble_final_nonas, -geometry)
 rgb_values_tibble_final_nonas <- select(rgb_values_tibble_final_nonas, -coverage_fraction)
@@ -84,6 +84,7 @@ Create random forest learner
 ```{r}
 #create a random forest learner
 learner <- lrn("classif.ranger", predict_type = "response")
+saveRDS(learner)
 ```
 
 Split data into 70% training and 30% validation
@@ -134,7 +135,7 @@ rgb_values_wholesite_df <- as.data.frame(rgb_values_wholesite)
 rgb_values_wholesite_df$className <- NA
 
 #add the edges column that we calculated before
-rgb_values_wholesite_df$edges <- num_edges
+#rgb_values_wholesite_df$edges <- num_edges
 print(rgb_values_wholesite_df)
 ```
 
@@ -147,8 +148,9 @@ print(rgb_values_wholesite_df)
 ```
 
 Apply the model to the new dataframe
-```{r}
+```{r message = F}
 predict <- learner$predict_newdata(newdata = rgb_values_wholesite_df)
+print(predict)
 ```
 
 

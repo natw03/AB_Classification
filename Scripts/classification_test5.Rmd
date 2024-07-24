@@ -1,0 +1,87 @@
+---
+title: "classification_test_5"
+author: "Natalie"
+date: "2024-07-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages}
+library(mlr3)
+library(mlr3learners)
+library(mlr3spatial)
+library(terra)
+library(sf)
+library(ggplot2)
+library(tidyterra)
+library(here)
+library(mlr3cluster)
+```
+
+Load in data. 
+```{r}
+site6_rast <- rast(here("IURA-2024", "Data", "site6_cropped", "site6_smallER.tif"))
+names(site6_rast) <- c("Band_1", "Band_2", "Band_3")
+site6_rast
+
+#The geopackage contains 200 random points per polygon and spectral information (rgb values) from the raster. 
+site6_vect <- read_sf(here("IURA-2024", "Data", "site6_cropped", "site6_cropped_pts_rgb.gpkg"), stringsAsFactors = TRUE)
+site6_vect
+```
+Create a spatial mlr3 task
+```{r}
+task <- as_task_classif_st(site6_vect, target = "className")
+```
+
+Partition the task into 70% train and 30% test sets
+```{r}
+set.seed(100)
+splits <- partition(task, ratio = 0.7)
+```
+
+Create and train a random forest learner
+```{r}
+learner_rf <- mlr3::lrn("classif.ranger")
+training_rf <- learner_rf$train(task, splits$train)
+```
+
+Test the random forest learner and obtain overall accuracy
+```{r}
+testing_rf <- learner_rf$predict(task, splits$test)
+testing_rf$score(msr("classif.acc"))
+```
+
+Apply the trained model to the entire raster
+```{r}
+classified <- predict_spatial(site6_rast, learner_rf)
+```
+```{r}
+print(classified)
+writeRaster(classified, here::here("IURA-2024", "Data", "site6_cropped", "site6_small_classified.tif"))
+```
+
+Plot the classified raster
+```{r}
+ggplot() +
+  geom_spatraster(data = classified) +
+  scale_fill_viridis_d(name = "Class", labels = c("Antelope Brush", "Ground", "Vegetation")) +
+  theme_minimal()
+```
+Calculate area of each class 
+```{r}
+activeCat(classified) <- "categories"
+classified
+f <- freq(classified)
+f$area <- f$count * (0.013 * 0.013) #in m2
+f$percent <- round(100 * f$area / sum(f$area), 1)
+f
+```
+
+
+
+
+
+

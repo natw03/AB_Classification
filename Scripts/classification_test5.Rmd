@@ -80,8 +80,57 @@ f$percent <- round(100 * f$area / sum(f$area), 1)
 f
 ```
 
+# Run same code but on a 5cm raster to compare accuracy
 
+Import raster and random points
+```{r}
+#Import raster
+site6_5cm <- rast(here("Data", "site6_5cm.tif"))
+names(site6_5cm) <- c("Band_1", "Band_2", "Band_3")
 
+#iImport points
+site6_5cm_vect <- read_sf(here("Data", "site6_5cm_pts_200.gpkg"), stringsAsFactors = TRUE)
+site6_5cm_vect
+```
+Create spatial task
+```{r}
+task_5cm <- as_task_classif_st(site6_5cm_vect, target = "className")
+```
 
+Partition the task into 70% train and 30% test sets
+```{r}
+set.seed(100)
+splits_5cm <- partition(task_5cm, ratio = 0.7)
+```
 
+Create and train a random forest learner
+```{r}
+learner_5cm_rf <- mlr3::lrn("classif.ranger")
+training_5cm_rf <- learner_5cm_rf$train(task_5cm, splits_5cm$train)
+```
 
+Test the random forest learner and obtain overall accuracy
+```{r}
+testing_5cm_rf <- learner_5cm_rf$predict(task_5cm, splits_5cm$test)
+testing_5cm_rf$score(msr("classif.acc"))
+```
+Apply the trained model to the entire raster
+```{r}
+classified_5cm <- predict_spatial(site6_5cm, learner_5cm_rf)
+```
+Plot the classified raster
+```{r}
+ggplot() +
+  geom_spatraster(data = classified_5cm) +
+  scale_fill_viridis_d(name = "Class", labels = c("Antelope Brush", "Ground", "Vegetation")) +
+  theme_minimal()
+```
+Calculate area of each class 
+```{r}
+activeCat(classified_5cm) <- "categories"
+classified_5cm
+freq_5cm <- freq(classified_5cm)
+freq_5cm$area <- freq_5cm$count * (0.013 * 0.013) #0.013m * 0.013m
+freq_5cm$percent <- round(100 * freq_5cm$area / sum(freq_5cm$area), 1)
+freq_5cm
+```

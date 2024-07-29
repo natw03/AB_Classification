@@ -1,0 +1,133 @@
+---
+title: "classification_test6"
+author: "Natalie"
+date: "2024-07-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load packages, message=F}
+library(mlr3)
+library(mlr3learners)
+library(mlr3spatial)
+library(terra)
+library(sf)
+library(ggplot2)
+library(tidyterra)
+library(here)
+library(mlr3cluster)
+library(OpenImageR)
+library(EBImage)
+```
+Import datasets
+```{r}
+site6_rast <- rast(here("Data", "site6_cropped", "site6_smallER.tif"))
+names(site6_rast) <- c("Band_1", "Band_2", "Band_3")
+site6_rast
+
+#The geopackage contains 200 random points per polygon and spectral information (rgb values) from the raster. 
+site6_vect_rgb <- read_sf(here("Data", "site6_cropped", "site6_cropped_pts_rgb.gpkg"), stringsAsFactors = TRUE)
+keep <- c("className", "geom")
+site6_vect <- site6_vect_rgb[, keep]
+site6_vect
+```
+# Calculate edges of raster and add it as a layer
+
+Convert the site6 raster to an array
+```{r}
+site6_array <- as.array(site6_rast)
+```
+
+Calculate the number of edges per pixel
+```{r}
+#convert the array to grayscale
+site6_gray <- rgb_2gray(site6_array)
+#remove all NA values
+site6_gray[is.na(site6_gray)] <- mean(site6_gray, na.rm = TRUE)
+#calculate edges
+edges <- edge_detection(site6_gray, method = "Sobel")
+```
+
+Convert "edges" to a raster layer and ensure it has the same crs and extent
+```{r}
+edges_rast <- rast(edges)
+ext(edges_rast) <- ext(site6_rast)
+crs(edges_rast) <- crs(site6_rast)
+names(edges_rast) <- "edges"
+plot(edges_rast)
+```
+Add the edges layer to the existing site6 raster
+```{r}
+site6_combined <- c(site6_rast, edges_rast)
+site6_combined
+```
+#Prepare data for model training
+
+Sample rgb and edge values at the training points of the geopackage
+```{r}
+#Convert geopackage to spatvector and extract values at points
+site6_pts <- vect(site6_vect)
+sampled_vals <- extract(site6_combined, site6_pts)
+site6_pts <- cbind(site6_pts, sampled_vals)
+#convert spatVector into dataframe
+site6_pts_df <- as.data.frame(site6_pts)
+coords <- geom(site6_pts, df=T,xnm="x", ynm="y")
+site6_pts_df <- cbind(site6_pts_df, coords)
+site6_pts_df
+```
+Remove unneeded coumns
+```{r}
+site6_pts_df <- select(site6_pts_df, -part, -hole, -geom, -ID)
+site6_pts_df
+```
+
+#Run mlr3 model
+Create spatial mlr3 task
+```{r}
+task <- TaskClassifST$new(id = "classification_task",
+                           backend = site6_pts_df,
+                           target = "className",
+                           coordinate_names = c("x", "y"))
+task
+```
+Partition the task into 70% train and 30% test sets
+```{r}
+set.seed(100)
+splits <- partition(task, ratio = 0.7)
+```
+
+Create and train random forest learner
+```{r}
+learner <- lrn("classif.ranger")
+train <- learner$train(task, splits$train)
+```
+
+Test learner and obtain overall accuracy
+```{r}
+test <- learner$predict(task, splits$test)
+test$score(msr("classif.acc"))
+```
+Model accuracy is not too different from if we only use rgb. 
+
+Predict an entire raster using the learner and plot the results
+```{r}
+classified <- predict_spatial(site6_combined, learner)
+
+ggplot() +
+  geom_spatraster(data = classified) +
+  scale_fill_viridis_d(name = "Class", labels = c("Antelope Brush", "Ground", "Vegetation")) +
+  theme_minimal()
+```
+Calculate area of each class
+```{r}
+activeCat(classified) <- "categories"
+classified
+f <- freq(classified)
+f$area <- f$count * (0.013 * 0.013) #in m2
+f$percent <- round(100 * f$area / sum(f$area), 1)
+f
+```
+

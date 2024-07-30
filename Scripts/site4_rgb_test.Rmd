@@ -1,0 +1,108 @@
+---
+title: "site4_rgb_test"
+author: "Natalie"
+date: "2024-07-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load packages, message=F}
+library(mlr3)
+library(mlr3learners)
+library(mlr3spatial)
+library(terra)
+library(sf)
+library(ggplot2)
+library(tidyterra)
+library(here)
+library(mlr3cluster)
+library(OpenImageR)
+library(EBImage)
+```
+
+Import datasets
+```{r}
+site4_rast <- rast(here("Data", "site4_cropped", "site4_cropped.tif"))
+names(site4_rast) <- c("Band_1", "Band_2", "Band_3")
+plotRGB(site4_rast)
+
+site4_pts <- read_sf(here("Data", "site4_cropped", "site4_randomPts.gpkg"), stringsAsFactors = T)
+keep <- c("className", "geom")
+site4_pts <- site4_pts[, keep]
+site4_pts
+```
+
+Extract raster values at the random points
+```{r}
+#convert gpkg to spatvector
+site4_vect <- vect(site4_pts)
+#extract rgb vals
+site4_rgb_vals <- extract(site4_rast, site4_vect)
+site4_rgb <- cbind(site4_vect, site4_rgb_vals)
+#convert the spatvector back into a geopackage containing its geometry
+site4_rgb_geopkg <- here("Data", "site4_cropped", "site4_rgb_geopkg.gpkg")
+writeVector(site4_rgb, site4_rgb_geopkg, filetype="GPKG")
+site4_rgb_geopkg <- read_sf(here("Data", "site4_cropped", "site4_rgb_geopkg.gpkg"), stringsAsFactors = T)
+site4_rgb_geopkg
+```
+Remove the ID column as its un-needed
+```{r}
+site4_rgb_geopkg <- select(site4_rgb_geopkg, -ID)
+site4_rgb_geopkg
+```
+Create a spatial task using mlr3
+```{r}
+site4_rgb_tsk <- as_task_classif_st(site4_rgb_geopkg, target="className") 
+```
+
+Partition data into 70% training and 30% testing
+```{r}
+set.seed(101)
+site4_split <- partition(site4_rgb_tsk, ratio = 0.7)
+```
+
+Create random forest learner
+```{r}
+site4_rgb_lrn <- lrn("classif.ranger")
+```
+
+Train learner using the "training" partition
+```{r}
+site4_rgb_train <- site4_rgb_lrn$train(site4_rgb_tsk, site4_split$train)
+```
+
+Use the "test" partition to obtain overall accuracy of the model
+```{r}
+site4_rgb_test <- site4_rgb_lrn$predict(site4_rgb_tsk, site4_split$test)
+site4_rgb_test$score(msr("classif.acc"))
+```
+
+Apply the trained learner to the entire raster
+```{r}
+site4_rgb_classified <- predict_spatial(site4_rast, site4_rgb_lrn)
+```
+
+Plot the classified raster
+```{r}
+ggplot() +
+  geom_spatraster(data = site4_rgb_classified) +
+  scale_fill_viridis_d(name = "Class", labels = c("Antelope Brush", "Ground", "Vegetation")) +
+  theme_minimal()
+```
+Export the classified raster 
+```{r}
+writeRaster(site4_rgb_classified, here("Data", "site4_cropped", "site4_cropped_classified.tif"), filetype = "GTiff")
+```
+
+Calculate the area of each class
+```{r}
+activeCat(site4_rgb_classified) <- "categories"
+f <- freq(site4_rgb_classified)
+f$area <- f$count * (0.013 * 0.013) #in m2
+f$percent <- round(100 * f$area / sum(f$area), 1)
+f
+```
+

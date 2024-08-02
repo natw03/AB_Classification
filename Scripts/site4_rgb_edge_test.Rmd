@@ -117,4 +117,7 @@ ggplot() +
   scale_fill_viridis_d(name = "Class", labels = c("Antelope Brush", "Ground", "Vegetation")) +
   theme_minimal()
 ```
-
+Export classified raster
+```{r}
+writeRaster(site4_rgb_edges_classified, here("Data", "site2_cropped", "site2_cropped_classified.tif"), filetype = "GTiff")
+```

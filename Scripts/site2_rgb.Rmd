@@ -1,0 +1,110 @@
+---
+title: "site2_rgb"
+author: "Natalie"
+date: "2024-07-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load packages, message=F}
+library(mlr3)
+library(mlr3learners)
+library(mlr3spatial)
+library(terra)
+library(sf)
+library(ggplot2)
+library(tidyterra)
+library(here)
+library(mlr3cluster)
+library(OpenImageR)
+library(EBImage)
+```
+```{r}
+site2_rast <- rast(here("Data", "site2_cropped", "site2_cropped.tif"))
+names(site2_rast) <- c("Band_1", "Band_2", "Band_3")
+plotRGB(site2_rast)
+
+site2_pts_rgb <- read_sf(here("Data", "site2_cropped", "site2_cropped_pts_rgb.gpkg"), stringsAsFactors = T)
+site2_pts_rgb <- select(site2_pts_rgb, -rand_point)
+site2_pts_rgb
+```
+Create Spatial task
+```{r}
+site2_rgb_tsk <- as_task_classif_st(site2_pts_rgb, target = "className")
+```
+
+Partition data into 70% training and 30% testing
+```{r}
+set.seed(102)
+site2_split <- partition(site2_rgb_tsk, ratio = 0.7)
+```
+
+Create random forest learner
+```{r}
+site2_rgb_lrn <- lrn("classif.ranger")
+```
+
+Train learner using the "training" partition
+```{r}
+site2_rgb_train <- site2_rgb_lrn$train(site2_rgb_tsk, site2_split$train)
+```
+
+Use the "test" partition to obtain overall accuracy of the model
+```{r}
+site2_rgb_test <- site2_rgb_lrn$predict(site2_rgb_tsk, site2_split$test)
+site2_rgb_test$score(msr("classif.acc"))
+```
+
+Apply the trained learner to the entire raster
+```{r}
+site2_rgb_classified <- predict_spatial(site2_rast, site2_rgb_lrn)
+```
+
+Plot the classified raster
+```{r}
+ggplot() +
+  geom_spatraster(data = site2_rgb_classified) +
+  scale_fill_viridis_d(name = "Class", labels = c("Antelope Brush", "Ground", "Vegetation")) +
+  theme_minimal()
+```
+Calculate the area of each class
+```{r}
+activeCat(site2_rgb_classified) <- "categories"
+f <- freq(site2_rgb_classified)
+f$area <- f$count * (0.013 * 0.013) #in m2
+f$percent <- round(100 * f$area / sum(f$area), 1)
+f
+```
+Export classified raster
+```{r}
+writeRaster(site2_rgb_classified, here("Data", "site2_cropped", "site2_cropped_rgb_classified.tif"), filetype = "GTiff")
+```
+
+Classify transect
+```{r}
+site2_transect <- rast(here("Data", "site2_cropped", "site2_cropped_transect.tif"))
+names(site2_transect) <- c("Band_1", "Band_2", "Band_3")
+site2_transect_classified <- predict_spatial(site2_transect, site2_rgb_lrn)
+```
+
+```{r}
+ggplot() +
+  geom_spatraster(data = site2_transect_classified) +
+  scale_fill_viridis_d(name = "Class", labels = c("Antelope Brush", "Ground", "Vegetation")) +
+  theme_minimal()
+```
+
+```{r}
+activeCat(site2_transect_classified) <- "categories"
+f <- freq(site2_transect_classified)
+f$area <- f$count * (0.013 * 0.013) #in m2
+f$percent <- round(100 * f$area / sum(f$area), 1)
+f
+```
+```{r}
+writeRaster(site2_transect_classified, here("Data", "site2_cropped", "site2_cropped_transect_classified.tif"), filetype = "GTiff", overwrite=T)
+```
+

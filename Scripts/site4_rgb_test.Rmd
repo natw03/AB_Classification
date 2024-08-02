@@ -44,7 +44,7 @@ site4_rgb_vals <- extract(site4_rast, site4_vect)
 site4_rgb <- cbind(site4_vect, site4_rgb_vals)
 #convert the spatvector back into a geopackage containing its geometry
 site4_rgb_geopkg <- here("Data", "site4_cropped", "site4_rgb_geopkg.gpkg")
-writeVector(site4_rgb, site4_rgb_geopkg, filetype="GPKG")
+writeVector(site4_rgb, site4_rgb_geopkg, filetype="GPKG", overwrite=T)
 site4_rgb_geopkg <- read_sf(here("Data", "site4_cropped", "site4_rgb_geopkg.gpkg"), stringsAsFactors = T)
 site4_rgb_geopkg
 ```
@@ -94,7 +94,7 @@ ggplot() +
 ```
 Export the classified raster 
 ```{r}
-writeRaster(site4_rgb_classified, here("Data", "site4_cropped", "site4_cropped_classified.tif"), filetype = "GTiff")
+writeRaster(site4_rgb_classified, here("Data", "site4_cropped", "site4_cropped_classified.tif"), filetype = "GTiff", overwrite=T)
 ```
 
 Calculate the area of each class

@@ -51,7 +51,7 @@ training_rf <- learner_rf$train(task, splits$train)
 Test the random forest learner and obtain overall accuracy
 ```{r}
 testing_rf <- learner_rf$predict(task, splits$test)
-testing_rf$score(msr("classif.acc"))
+(testing_rf$score(msr("classif.acc"))
 ```
 
 Apply the trained model to the entire raster

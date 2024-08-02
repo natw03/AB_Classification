@@ -1,0 +1,128 @@
+---
+title: "site2_rgb_edges"
+author: "Natalie"
+date: "2024-07-31"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Load packages, message=F}
+library(mlr3)
+library(mlr3learners)
+library(mlr3spatial)
+library(terra)
+library(sf)
+library(ggplot2)
+library(tidyterra)
+library(here)
+library(mlr3cluster)
+library(OpenImageR)
+library(EBImage)
+```
+
+Import Datasets
+```{r}
+site2_rast <- rast(here("Data", "site2_cropped", "site2_cropped.tif"))
+names(site2_rast) <- c("Band_1", "Band_2", "Band_3")
+plotRGB(site2_rast)
+
+site2_pts <- read_sf(here("Data", "site2_cropped", "site2_cropped_pts.shp"))
+site2_pts <- select(site2_pts, -rand_point)
+site2_pts
+```
+
+Convert the raster to an array
+```{r}
+site2_array <- as.array(site2_rast)
+```
+
+Calculate edges per pixel
+```{r}
+site2_gray <- rgb_2gray(site2_array)
+site2_gray[is.na(site2_gray)] <- mean(site2_gray, na.rm = TRUE)
+site2_edges <- edge_detection(site2_gray, method = "Sobel")
+```
+
+Convert edges to a raster
+```{r}
+site2_edges_rast <- rast(site2_edges)
+ext(site2_edges_rast) <- ext(site2_rast)
+crs(site2_edges_rast) <- crs(site2_rast)
+names(site2_edges_rast) <- "edges"
+plot(site2_edges_rast)
+```
+Add edges layer to existing site raster
+```{r}
+site2_rgb_edges_rast <- c(site2_rast, site2_edges_rast)
+site2_rgb_edges_rast
+```
+Extract raster values
+```{r}
+site2_rgb_edges_vals <- extract(site2_rgb_edges_rast, site2_pts)
+site2_rgb_edges_vals
+site2_rgb_edges_vect <- cbind(site2_pts, site2_rgb_edges_vals)
+site2_rgb_edges_vect
+```
+Convert vector to a geopackage
+```{r}
+site2_rgb_edges_geopkg <- here("Data", "site2_cropped", "site2_rgb_edges_geopkg.gpkg")
+st_write(site2_rgb_edges_vect, site2_rgb_edges_geopkg, filetype="GPKG", append=F)
+site2_rgb_edges_geopkg <- read_sf(here("Data", "site2_cropped", "site2_rgb_edges_geopkg.gpkg"), stringsAsFactors = T)
+site2_rgb_edges_geopkg <- select(site2_rgb_edges_geopkg, -ID)
+site2_rgb_edges_geopkg
+```
+Create spatial task using mlr3
+```{r}
+site2_rgb_edges_tsk <- as_task_classif_st(site2_rgb_edges_geopkg, target = "className")
+```
+
+Partition data into 70% training and 30% testing
+```{r}
+set.seed(102)
+site2_rgb_edges_split <- partition(site2_rgb_edges_tsk, ratio = 0.7)
+```
+
+Create random forest learner
+```{r}
+site2_rgb_edges_lrn <- lrn("classif.ranger")
+```
+
+Train learner using the "training" partition
+```{r}
+site2_rgb_edges_train <- site2_rgb_edges_lrn$train(site2_rgb_edges_tsk, site2_rgb_edges_split$train)
+```
+
+Use the "test" partition to obtain overall accuracy of the model
+```{r}
+site2_rgb_edges_test <- site2_rgb_edges_lrn$predict(site2_rgb_edges_tsk, site2_rgb_edges_split$test)
+site2_rgb_edges_test$score(msr("classif.acc"))
+```
+
+Apply the trained learner to the entire raster
+```{r}
+site2_rgb_edges_classified <- predict_spatial(site2_rgb_edges_rast, site2_rgb_edges_lrn)
+```
+
+Plot the classified raster
+```{r}
+ggplot() +
+  geom_spatraster(data = site2_rgb_edges_classified) +
+  scale_fill_viridis_d(name = "Class", labels = c("Antelope Brush", "Ground", "Vegetation")) +
+  theme_minimal()
+```
+Calculate the area of each class
+```{r}
+activeCat(site2_rgb_edges_classified) <- "categories"
+f <- freq(site2_rgb_edges_classified)
+f$area <- f$count * (0.013 * 0.013) #in m2
+f$percent <- round(100 * f$area / sum(f$area), 1)
+f
+```
+Export classified raster
+```{r}
+writeRaster(site2_rgb_edges_classified, here("Data", "site2_cropped", "site2_cropped_classified.tif"), filetype = "GTiff")
+```
+
